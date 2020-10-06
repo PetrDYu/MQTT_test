@@ -1,6 +1,7 @@
 #include "config.h"
 #include <soc/rtc.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 TTGOClass *ttgo;
@@ -56,7 +57,8 @@ void onMqttConnect(bool sessionPresent) {
   Serial.print("Session present: ");  //  "Текущая сессия: "
   Serial.println(sessionPresent);
   // подписываем ESP32 на топик «esp32/data_t_wrist»:
-  uint16_t packetIdSub = mqttClient.subscribe("esp32/data_t_wrist", 0);
+  //uint16_t packetIdSub = mqttClient.subscribe("esp32/data_t_wrist", 0);
+  uint16_t packetIdSub = mqttClient.subscribe("test", 0);
   Serial.print("Subscribing at QoS 0, packetId: ");
          //  "Подписываемся при QoS 0, ID пакета: "
   Serial.println(packetIdSub);
@@ -103,7 +105,8 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     messageTemp += (char)payload[i];
   }
   // проверяем, получено ли MQTT-сообщение в топике «esp32/led»:
-  if (strcmp(topic, "esp32/data_t_wrist") == 0) {
+  //if (strcmp(topic, "esp32/data_t_wrist") == 0) {
+  if (strcmp(topic, "test") == 0) {
     ttgo->tft->fillScreen(TFT_BLACK);
     ttgo->tft->setCursor(0, 0);
     ttgo->tft->print(messageTemp);
@@ -130,6 +133,12 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   Serial.println(total);
 }
 
+void pressed()
+{
+    ttgo->tft->print("Restart");
+    esp_restart();
+}
+
 void setup() {
   // put your setup code here, to run once:
   ttgo = TTGOClass::getWatch();
@@ -147,6 +156,12 @@ void setup() {
     ttgo->rtc->syncToSystem();
 
     ttgo->openBL(); // Turn on the backlight
+
+    ttgo->button->setLongClickHandler([]() {
+        Serial.println("Pressed Restart Button,Restart now ...");
+        delay(1000);
+        ESP.restart();
+    });
   
   Serial.begin(115200);
 
@@ -169,9 +184,14 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   unsigned long currentMillis = millis();
+  char message[100] = "", chr_chr;
+  String str;
+  char* chr;
 
-  int random_out = esp_random();
-  char random_out_st [20];
+ // ttgo->button->loop();
+
+  /*int random_out = esp_random();
+  /*char random_out_st [20];
   // каждые X секунд («interval» = 5 секунд) 
   // в топик «esp32/temperature»
   // будет публиковаться новое MQTT-сообщение:
@@ -181,13 +201,30 @@ void loop() {
     previousMillis = currentMillis;
     // новые данные: 
     
-    Serial.println(random_out);
+    Serial.println(random_out);*/
     // публикуем MQTT-сообщение в топике «esp32/data»
-    itoa(random_out, random_out_st, 10);
-    uint16_t packetIdPub2 = mqttClient.publish("esp32/data", 2, true, random_out_st);
-    Serial.print("Publishing on topic esp32/data at QoS 2, packetId: ");  
+    //itoa(random_out, random_out_st, 10);
+    //uint16_t packetIdPub2 = mqttClient.publish("esp32/data", 2, true, random_out_st);
+    uint16_t packetIdPub2 = mqttClient.publish("test", 2, true, message);
+    Serial.print("Publishing on topic test at QoS 2, packetId: ");  
              //  "Публикация в топик «esp32/data»
              //   при QoS 2, ID пакета: "
     Serial.println(packetIdPub2);
+    //chr = Serial.read();
+    
+    /*while (chr != 0)
+    {*/
+        //chr_chr = (const char)chr;
+        //&message = strcat(&message, &chr_chr);
+       // message = "";
+        while (!Serial.available());
+        str = Serial.readString();
+        for(int i = 0; i < str.length(); i++)
+        {
+          message[i] = str[i];
+        }
+        //delay(100);
+        //Serial.print(chr);
+    //}
+    
   }
-}
